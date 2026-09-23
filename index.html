@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医疗大数据技术的过拟合问题</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/theme/white.css">
+    <style>
+        :root {
+            --primary: #0a4d8c;
+            --primary-deep: #082d56;
+            --secondary: #1d9bf0;
+            --accent: #ff6b6b;
+            --success: #27ae60;
+            --warning: #f4b942;
+            --bg-soft: #edf5ff;
+            --bg-card: rgba(255,255,255,0.8);
+            --border: #dfeaf6;
+            --text: #233549;
+            --muted: #66809b;
+            --shadow: 0 18px 40px rgba(10, 77, 140, 0.12);
+        }
+
+        .reveal {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background: linear-gradient(180deg, #f5f9ff 0%, #edf5ff 100%);
+        }
+
+        .reveal .slides section {
+            text-align: left;
+            padding: 24px 36px;
+            background: transparent;
+        }
+
+        .reveal h1, .reveal h2, .reveal h3 {
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .reveal h1 {
+            font-size: 1.8em;
+            margin-bottom: 0.25em;
+        }
+
+        .reveal h2 {
+            font-size: 1.35em;
+            margin-bottom: 0.4em;
+        }
+
+        .reveal h3 {
+            font-size: 1.02em;
+            margin-bottom: 0.3em;
+        }
+
+        .reveal p, .reveal li {
+            font-size: 0.8em;
+            line-height: 1.7;
+            color: var(--text);
+        }
+
+        .reveal ul, .reveal ol {
+            margin-top: 0.5em;
+        }
+
+        .reveal li {
+            margin: 0.24em 0;
+        }
+
+        .reveal strong {
+            color: var(--primary-deep);
+        }
+
+        .center { text-align: center; }
+        .muted { color: var(--muted); }
+        .highlight { color: var(--accent); font-weight: 700; }
+        .success { color: var(--success); font-weight: 700; }
+        .warning { color: var(--warning); font-weight: 700; }
+
+        .cover {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #eaf3ff 0%, #dfeeff 35%, #eff7ff 100%);
+            border: 1px solid rgba(10, 77, 140, 0.08);
+            box-shadow: var(--shadow);
+        }
+
+        .cover::before, .cover::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(8px);
+            opacity: 0.8;
+        }
+
+        .cover::before {
+            width: 240px;
+            height: 240px;
+            background: rgba(29, 155, 240, 0.12);
+            right: -40px;
+            top: -60px;
+        }
+
+        .cover::after {
+            width: 220px;
+            height: 220px;
+            background: rgba(255, 107, 107, 0.10);
+            left: -40px;
+            bottom: -50px;
+        }
+
+        .cover .badge {
+            display: inline-block;
+            padding: 7px 14px;
+            border-radius: 20px;
+            background: rgba(10, 77, 140, 0.08);
+            border: 1px solid rgba(10, 77, 140, 0.12);
+            color: var(--primary);
+            font-size: 0.62em;
+            letter-spacing: 1.5px;
+            margin-bottom: 14px;
+        }
+
+        .cover .title-wrap {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover h2 {
+            font-size: 1.2em;
+            margin-bottom: 0.4em;
+            color: var(--primary);
+        }
+
+        .cover h1 {
+            font-size: 2.1em;
+            line-height: 1.1;
+            margin: 0 0 0.2em;
+            color: var(--primary-deep);
+        }
+
+        .cover .subtitle {
+            font-size: 0.75em;
+            color: var(--muted);
+            margin-top: 0.2em;
+            letter-spacing: 0.2px;
+        }
+
+        .cover .footer-note {
+            margin-top: 24px;
+            font-size: 0.55em;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 20px 18px;
+            margin-top: 12px;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .three-col {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 12px;
+        }
+
+        .metric-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(232,240,255,0.75));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 14px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(10,77,140,0.06);
+        }
+
+        .metric-card .big {
+            display: block;
+            font-size: 1.5em;
+            font-weight: 800;
+            color: var(--primary-deep);
+            margin-bottom: 6px;
+        }
+
+        .metric-card .small {
+            font-size: 0.58em;
+            color: var(--muted);
+        }
+
+        .mini-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(29,155,240,0.08);
+            color: var(--primary);
+            border-radius: 999px;
+            border: 1px solid rgba(29,155,240,0.15);
+            font-size: 0.52em;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+
+        .quote {
+            position: relative;
+            padding: 18px 20px 18px 30px;
+            border-left: 5px solid var(--secondary);
+            background: rgba(112,195,255,0.07);
+            border-radius: 12px;
+            font-size: 0.78em;
+            line-height: 1.7;
+        }
+
+        .chart-box {
+            background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(238,247,255,0.9));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 14px 12px 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .curve-wrap {
+            width: 100%;
+            height: 210px;
+            margin-top: 8px;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #f8fbff, #eef6ff);
+            border: 1px solid rgba(10,77,140,0.08);
+        }
+
+        .curve-wrap svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            justify-content: center;
+            margin-top: 10px;
+            font-size: 0.56em;
+            color: var(--muted);
+        }
+
+        .legend i {
+            display: inline-block;
+            width: 14px;
+            height: 4px;
+            border-radius: 999px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .train { background: var(--secondary); }
+        .test { background: var(--accent); }
+
+        .risk-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.5em 0 0;
+        }
+
+        .risk-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .risk-icon {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 0.9em;
+            font-weight: 700;
+            background: rgba(10,77,140,0.08);
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .process {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .process .step {
+            background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(234,244,255,0.86));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 15px 12px;
+            text-align: center;
+            box-shadow: 0 8px 18px rgba(10, 77, 140, 0.06);
+        }
+
+        .process .num {
+            display: inline-flex;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            margin-bottom: 10px;
+        }
+
+        .process p {
+            font-size: 0.6em;
+            margin: 0;
+            color: var(--text);
+        }
+
+        .bar-demo {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 18px;
+            height: 180px;
+            padding: 18px 18px 10px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(233,241,255,0.85));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-top: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .bar-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bar {
+            width: 58%;
+            border-radius: 10px 10px 0 0;
+            position: relative;
+        }
+
+        .bar::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.48em;
+            color: var(--muted);
+        }
+
+        .bar.a { background: linear-gradient(180deg, #7ec8ff, #1d9bf0); height: 62%; }
+        .bar.b { background: linear-gradient(180deg, #a4d9ff, #4aa5d9); height: 48%; }
+        .bar.c { background: linear-gradient(180deg, #ffd4a8, #f4b942); height: 31%; }
+        .bar.d { background: linear-gradient(180deg, #ffb8b8, #ff6b6b); height: 18%; }
+
+        .table-box {
+            background: rgba(255,255,255,0.82);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .table-box table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.66em;
+        }
+
+        .table-box th, .table-box td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eaeef5;
+            text-align: left;
+        }
+
+        .table-box th {
+            background: rgba(10,77,140,0.06);
+            color: var(--primary-deep);
+            font-weight: 700;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.52em;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .pill.good {
+            background: rgba(39,174,96,0.12);
+            color: #1f8d4f;
+            border-color: rgba(39,174,96,0.2);
+        }
+
+        .pill.warn {
+            background: rgba(244,185,66,0.12);
+            color: #b87d00;
+            border-color: rgba(244,185,66,0.2);
+        }
+
+        .pill.bad {
+            background: rgba(255,107,107,0.12);
+            color: #d44949;
+            border-color: rgba(255,107,107,0.18);
+        }
+
+        .final-box {
+            background: linear-gradient(135deg, rgba(10,77,140,0.95), rgba(29,155,240,0.86));
+            border: none;
+            color: white;
+            border-radius: 22px;
+            padding: 26px 24px;
+            box-shadow: 0 24px 40px rgba(10,77,140,0.18);
+        }
+
+        .final-box h2, .final-box p, .final-box li {
+            color: white !important;
+        }
+
+        .final-box .chip {
+            display: inline-block;
+            background: rgba(255,255,255,0.14);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 999px;
+            padding: 6px 10px;
+            margin: 0 8px 8px 0;
+            font-size: 0.54em;
+        }
+
+        .footer-cta {
+            margin-top: 10px;
+            font-size: 0.7em;
+            color: white;
+            font-weight: 700;
+        }
+
+        .reveal .slides section[data-markdown-parsed=true] {
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section class="cover">
+                <div class="title-wrap">
+                    <div class="badge">AI × 医疗大数据</div>
+                    <h2>医疗大数据技术的</h2>
+                    <h1>过拟合问题</h1>
+                    <p class="subtitle">从“看起来很强”到“真正能治病”——浅析原因与解决路径</p>
+                    <p class="footer-note">演示模式：键盘左右键翻页 / 按 F 全屏</p>
+                </div>
+            </section>
+
+            <section>
+                <h2>1. 先回答一个问题：什么是过拟合？</h2>
+                <div class="two-col">
+                    <div>
+                        <div class="quote">
+                            “模型学习到了训练数据里的‘偶然噪音’，而不是规律。<br>
+                            于是它在训练集上表现得非常好，却在真实病人群体上表现变差。”
+                        </div>
+                        <ul>
+                            <li>训练集表现：<span class="success">99%</span>，看起来非常优秀</li>
+                            <li>真实场景表现：<span class="highlight">50%</span>，甚至低于常识水平</li>
+                            <li>本质：把“样本特征中的巧合”当成“医学规律”</li>
+                        </ul>
+                    </div>
+                    <div class="chart-box">
+                        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" aria-label="拟合示意图">
+                            <defs>
+                                <linearGradient id="g1" x1="0" x2="1">
+                                    <stop offset="0%" stop-color="#1d9bf0"/>
+                                    <stop offset="100%" stop-color="#4db2ff"/>
+                                </linearGradient>
+                            </defs>
+                            <rect x="0" y="0" width="320" height="180" fill="#f7fbff"/>
+                            <path d="M30 140 C 70 120, 95 90, 120 80 S 180 55, 220 72 S 270 60, 290 40" stroke="#1d9bf0" stroke-width="4" fill="none"/>
+                            <path d="M30 140 L 30 25 M 30 140 L 290 140" stroke="#9bb4cc" stroke-width="1.5"/>
+                            <g fill="#ff6b6b">
+                                <circle cx="50" cy="126" r="4"/>
+                                <circle cx="86" cy="115" r="4"/>
+                                <circle cx="126" cy="101" r="4"/>
+                                <circle cx="152" cy="88" r="4"/>
+                                <circle cx="195" cy="70" r="4"/>
+                                <circle cx="230" cy="64" r="4"/>
+                                <circle cx="263" cy="55" r="4"/>
+                            </g>
+                            <path d="M30 140 L 50 126 L 86 115 L 126 101 L 152 88 L 195 70 L 230 64 L 263 55 L 290 40" stroke="#ff6b6b" stroke-width="2" fill="none" stroke-dasharray="6 5" opacity="0.9"/>
+                            <text x="118" y="170" font-size="12" fill="#66809b">数据点</text>
+                            <text x="176" y="32" font-size="12" fill="#ff6b6b">过拟合曲线</text>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>2. 为什么医疗数据容易“学偏”？</h2>
+                <div class="three-col">
+                    <div class="card">
+                        <span class="mini-tag">高维低样本</span>
+                        <p><strong>一个病人可能有数万维特征</strong>，但罕见病样本往往只有几十或几百例。</p>
+                        <p>模型很容易“找出训练集中极小差异”，但这些差异未必稳定。</p>
+                    </div>
+                    <div class="card">
+                        <span class="mini-tag">标签噪声</span>
+                        <p><strong>病历记录、随访缺失、人工判读误差</strong>都会导致标签偏差。</p>
+                        <p>AI 可能把病历中“笔误”误学成强规则。</p>
+                    </div>
+                    <div class="card">
+                        <span class="mini-tag">多中心差异</span>
+                        <p><strong>不同医院设备、拍片参数、人口结构不同</strong>，导致模型记住“医院风格”而不是“病理规律”。</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>3. 过拟合的典型“症状”</h2>
+                <div class="two-col">
+                    <div class="chart-box">
+                        <div class="curve-wrap">
+                            <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="0" y="0" width="400" height="220" fill="#f7fbff"/>
+                                <g stroke="#b4c6d9" stroke-width="1" fill="none">
+                                    <path d="M40 180 H360 M40 180 V30"/>
+                                    <path d="M40 150 H360 M40 120 H360 M40 90 H360 M40 60 H360"/>
+                                </g>
+                                <path d="M40 170 C80 150, 110 120, 150 95 S 230 72, 260 70 S 320 52, 360 40" fill="none" stroke="#1d9bf0" stroke-width="4"/>
+                                <path d="M40 170 C90 160, 120 150, 150 120 S 220 90, 260 110 S 320 130, 360 145" fill="none" stroke="#ff6b6b" stroke-width="4"/>
+                                <g fill="#1d9bf0" font-size="12">
+                                    <text x="44" y="195">0</text>
+                                    <text x="135" y="195">训练轮数</text>
+                                </g>
+                                <g fill="#1d9bf0" font-size="12">
+                                    <text x="18" y="60" transform="rotate(-90 18 60)">误差</text>
+                                </g>
+                                <g fill="#ff6b6b" font-size="12">
+                                    <text x="290" y="155">验证误差上升</text>
+                                </g>
+                            </svg>
+                        </div>
+                        <div class="legend">
+                            <span><i class="train"></i>训练误差</span>
+                            <span><i class="test"></i>验证误差</span>
+                        </div>
+                    </div>
+                    <div class="risk-list">
+                        <li><span class="risk-icon">1</span><div><strong>训练准确率很高</strong>，但临床落地效果差</div></li>
+                        <li><span class="risk-icon">2</span><div><strong>模型对噪声过度敏感</strong>，微小病历差异被误判</div></li>
+                        <li><span class="risk-icon">3</span><div><strong>跨医院迁移能力差</strong>，一院模型换另一院就失效</div></li>
+                        <li><span class="risk-icon">4</span><div><strong>对罕见病例表现不稳定</strong>，最危险的时候恰恰是‘少样本’场景</div></li>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>4. 一个简单例子：为什么“穿红衣服”会误导模型？</h2>
+                <div class="card">
+                    <p>把训练样本理解成“发烧+咳嗽+<span class="highlight">穿红衣服</span> = 感冒”时，模型会寻找“红衣服”这个看起来强相关但其实无效的模式。</p>
+                    <div class="two-col">
+                        <div class="box" style="background:#f8fbff;border-radius:14px;border:1px solid var(--border);padding:14px 16px;">
+                            <p><strong>训练集</strong></p>
+                            <ul>
+                                <li>发烧 + 咳嗽 + 穿红衣服 → 感冒</li>
+                                <li>发烧 + 咳嗽 + 穿红衣服 → 感冒</li>
+                                <li>发烧 + 咳嗽 + 穿红衣服 → 感冒</li>
+                            </ul>
+                        </div>
+                        <div class="box" style="background:#fff6f6;border-radius:14px;border:1px solid rgba(255,107,107,0.15);padding:14px 16px;">
+                            <p><strong>真实场景</strong></p>
+                            <ul>
+                                <li>发烧 + 咳嗽 + 穿蓝衣服 → 也可能是感冒</li>
+                                <li>但模型因为“红衣服”被学死了</li>
+                                <li>结果：<span class="highlight">识别失败</span>，归因错误</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>5. 解决方案概览：四把“防过拟合”的利器</h2>
+                <div class="process">
+                    <div class="step">
+                        <div class="num">1</div>
+                        <p><strong>正则化</strong><br>让模型不要过度自信</p>
+                    </div>
+                    <div class="step">
+                        <div class="num">2</div>
+                        <p><strong>Dropout</strong><br>随机休息，减少依赖单一特征</p>
+                    </div>
+                    <div class="step">
+                        <div class="num">3</div>
+                        <p><strong>数据增强</strong><br>变形训练，增强泛化</p>
+                    </div>
+                    <div class="step">
+                        <div class="num">4</div>
+                        <p><strong>交叉验证</strong><br>看它是否“真会”</p>
+                    </div>
+                    <div class="step">
+                        <div class="num">5</div>
+                        <p><strong>外部验证</strong><br>跨医院真实考核</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>6. 正则化：让模型“只抓关键特征”</h2>
+                <div class="two-col">
+                    <div>
+                        <p>正则化的核心思想：<strong>给复杂模型“纪律”</strong>，不要让权重无限变大。</p>
+                        <ul>
+                            <li><strong>L1/Lasso</strong>：自动压缩不重要特征，适合高维稀疏医疗数据</li>
+                            <li><strong>L2/Ridge</strong>：惩罚大权重，避免“学得过猛”</li>
+                            <li><strong>Elastic Net</strong>：兼顾L1/L2，平衡稳定性和稀疏性</li>
+                        </ul>
+                    </div>
+                    <div class="table-box">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>方法</th>
+                                    <th>作用</th>
+                                    <th>适用场景</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>L1</td>
+                                    <td>特征选择</td>
+                                    <td>基因/临床指标筛选</td>
+                                </tr>
+                                <tr>
+                                    <td>L2</td>
+                                    <td>稳定权重</td>
+                                    <td>回归/神经网络</td>
+                                </tr>
+                                <tr>
+                                    <td>Elastic Net</td>
+                                    <td>兼顾稀疏与稳定</td>
+                                    <td>医学高维数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>7. Dropout 与 Early Stopping：让模型不要“背答案”</h2>
+                <div class="two-col">
+                    <div class="card">
+                        <p><span class="mini-tag">Dropout</span>在训练时随机“关闭”部分神经元，防止模型对单个特征过度依赖。</p>
+                        <p><span class="mini-tag">Early Stopping</span>在验证集误差开始上升时提前停止训练，防止模型继续“记住噪声”。</p>
+                    </div>
+                    <div class="bar-demo">
+                        <div class="bar-group">
+                            <div class="bar a" data-label="训练期"></div>
+                            <div class="bar b" data-label="稳定期"></div>
+                        </div>
+                        <div class="bar-group">
+                            <div class="bar c" data-label="继续学"></div>
+                            <div class="bar d" data-label="提前停"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>8. 数据增强：让模型“见得更多，不靠原题”</h2>
+                <div class="three-col">
+                    <div class="card">
+                        <p><strong>影像增强</strong></p>
+                        <ul>
+                            <li>旋转、翻转、裁剪</li>
+                            <li>亮度和对比度调节</li>
+                            <li>加入轻度噪声</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <p><strong>文本增强</strong></p>
+                        <ul>
+                            <li>同义词替换</li>
+                            <li>回译/语序变换</li>
+                            <li>病历字段扰动</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <p><strong>核心价值</strong></p>
+                        <ul>
+                            <li>减少样本偏差</li>
+                            <li>提升泛化能力</li>
+                            <li>让模型更像“学习规律”而不是“背答案”</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>9. 集成学习与交叉验证：让结论更可靠</h2>
+                <div class="two-col">
+                    <div>
+                        <ul>
+                            <li><strong>集成学习</strong>：训练多个模型，最终投票或加权融合，减少单模型偶然错误</li>
+                            <li><strong>5折交叉验证</strong>：轮流用4份训练、1份验证，避免“碰巧好看”</li>
+                            <li><strong>外部验证</strong>：使用不同医院、不同设备的数据进行评估</li>
+                        </ul>
+                    </div>
+                    <div class="table-box">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>评估方式</th>
+                                    <th>目的</th>
+                                    <th>价值</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>内部验证</td>
+                                    <td>调参/筛选模型</td>
+                                    <td>快速迭代</td>
+                                </tr>
+                                <tr>
+                                    <td>交叉验证</td>
+                                    <td>评估稳定性</td>
+                                    <td>降低偶然误判</td>
+                                </tr>
+                                <tr>
+                                    <td>外部验证</td>
+                                    <td>真实部署能力</td>
+                                    <td>更接近临床落地</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>10. 归根结底：医疗AI要避免“死记硬背式判断”</h2>
+                <div class="final-box">
+                    <p class="chip">高维数据</p>
+                    <p class="chip">噪声标签</p>
+                    <p class="chip">多中心差异</p>
+                    <p class="chip">样本不足</p>
+                    <ul>
+                        <li>过拟合不是“模型表现好”，而是“模型对训练集过度贴合”</li>
+                        <li>医疗AI的核心目标不是让它在训练集上看起来很聪明，而是让它<em>在真实患者群体中更稳、更准</em></li>
+                        <li>真正优质的模型，应该是<em>能解释、能泛化、能跨场景</em>的模型</li>
+                    </ul>
+                    <div class="footer-cta">👉 最终目标：让 AI 成为可靠的辅助诊断工具，而不是“记住了练习题答案的‘假医生’”</div>
+                </div>
+            </section>
+
+            <section class="center">
+                <h2>谢谢观看</h2>
+                <p>Q & A</p>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            transition: 'slide',
+            controls: true,
+            progress: true,
+            center: false,
+            width: 1200,
+            height: 700
+        });
+    </script>
+</body>
+</html>
