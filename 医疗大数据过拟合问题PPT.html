@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医疗大数据技术的过拟合问题</title>
+    <!-- 引入 Reveal.js 核心 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.css">
+    <!-- 引入主题（white/black/league/beige/sky/night/serif/simple/solarized） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/theme/white.css">
+    <!-- 自定义样式 -->
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { color: #0a4d8c; }
+        .reveal p, .reveal li { font-size: 0.85em; line-height: 1.6; }
+        .reveal .slides section { text-align: left; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #0a4d8c;
+            margin: 10px 0;
+        }
+        .center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- 幻灯片 1：封面 -->
+            <section class="center">
+                <h2>🏥 医疗大数据技术的</h2>
+                <h1>过拟合问题</h1>
+                <p>与简单易懂的算法解决方案</p>
+                <br>
+                <p style="font-size: 0.6em; color: #666;">演示模式：键盘左右键翻页 / 按 F 全屏</p>
+            </section>
+
+            <!-- 幻灯片 2：什么是过拟合？ -->
+            <section>
+                <h2>1. 什么是“过拟合”？</h2>
+                <div class="box">
+                    <p>📖 <strong>生活例子：</strong></p>
+                    <p>教学生备考：题目是“发烧+咳嗽+<span class="highlight">穿红衣服</span>=感冒”。</p>
+                    <p>学生死记硬背，考试时遇到“发烧+咳嗽+<span class="highlight">穿蓝衣服</span>”就不会了。</p>
+                </div>
+                <ul>
+                    <li>AI 把训练数据中的<strong>噪音/巧合</strong>当成了<strong>医学规律</strong>。</li>
+                    <li>训练集准确率 99%，新病人身上只有 50%。</li>
+                </ul>
+            </section>
+
+            <!-- 幻灯片 3：为什么医疗数据容易过拟合？ -->
+            <section>
+                <h2>2. 为什么医疗数据特别容易中招？</h2>
+                <ul>
+                    <li>📊 <strong>高维低样本</strong>：一个病人几万个基因特征，但罕见病只有几百病例。</li>
+                    <li>🔊 <strong>标签噪声</strong>：病历笔误、随访丢失，AI 也会当真学。</li>
+                    <li>🏥 <strong>多中心差异</strong>：A 医院 CT 机和 B 医院的不一样，模型可能只记住了某家医院的“拍照风格”。</li>
+                </ul>
+            </section>
+
+            <!-- 幻灯片 4：算法解决方案概览 -->
+            <section class="center">
+                <h2>如何解决？四大“防死记硬背”绝招</h2>
+                <ul>
+                    <li>① 正则化 —— <em>逼它抓重点</em></li>
+                    <li>② Dropout与早停 —— <em>防学疯魔</em></li>
+                    <li>③ 数据增强 —— <em>变着花样练</em></li>
+                    <li>④ 集成学习 —— <em>多专家会诊</em></li>
+                </ul>
+            </section>
+
+            <!-- 幻灯片 5：正则化 -->
+            <section>
+                <h2>3. 正则化（Regularization）</h2>
+                <p>💡 <strong>比喻：划重点</strong></p>
+                <div class="box">
+                    <p>告诉学生：“<span class="highlight">穿红衣服</span>这种歪理不许写，只准写‘发烧、咳嗽’等核心知识点。”</p>
+                </div>
+                <ul>
+                    <li><strong>L1/Lasso</strong>：直接把不重要特征的权重变成 0（自动删特征）。</li>
+                    <li><strong>L2/Ridge</strong>：惩罚过大的权重，让模型别太“自信”。</li>
+                    <li><strong>Elastic Net</strong>：两者结合，医疗高维数据最爱。</li>
+                </ul>
+            </section>
+
+            <!-- 幻灯片 6：Dropout与早停 -->
+            <section>
+                <h2>4. Dropout 与 早停</h2>
+                <p>💡 <strong>比喻：随机点名与模拟考</strong></p>
+                <ul>
+                    <li>🎲 <strong>Dropout</strong>：训练时随机让一半“脑细胞”休息，逼剩下的脑子真正学会解题，不依赖任何单个特征。</li>
+                    <li>⏱️ <strong>早停（Early Stopping）</strong>：做模拟题时分数开始下降，立刻喊停！说明模型开始背答案了。</li>
+                </ul>
+            </section>
+
+            <!-- 幻灯片 7：数据增强 -->
+            <section>
+                <h2>5. 数据增强（Data Augmentation）</h2>
+                <p>💡 <strong>比喻：变着花样练</strong></p>
+                <div class="box">
+                    <p>病人太少？把现有的 CT 片子<span class="highlight">旋转、调亮、裁掉一块</span>，变成“新”片子给 AI 看。</p>
+                </div>
+                <ul>
+                    <li>影像：旋转、翻转、加噪声。</li>
+                    <li>文本：同义词替换、回译。</li>
+                    <li>让 AI 反复练同一个知识点，而不是背原题。</li>
+                </ul>
+            </section>
+
+            <!-- 幻灯片 8：集成学习与交叉验证 -->
+            <section>
+                <h2>6. 集成学习与交叉验证</h2>
+                <p>💡 <strong>比喻：别只听一个庸医的，多找几个专家会诊</strong></p>
+                <ul>
+                    <li>🧑‍🤝‍🧑 <strong>集成学习</strong>：训练 10 个模型，让他们投票。某个模型的离谱错误会被其他模型“拉回来”。</li>
+                    <li>🔄 <strong>交叉验证</strong>：把病人分 5 组，轮流用 4 组训练、1 组考试，确保不是碰巧。</li>
+                    <li>🌐 <strong>外部验证</strong>：用 A 医院数据训练，拿到 B 医院测试。这才是真正的“出师”。</li>
+                </ul>
+            </section>
+
+            <!-- 幻灯片 9：总结 -->
+            <section>
+                <h2>7. 总结</h2>
+                <div class="box">
+                    <p>医疗 AI 过拟合 = <span class="highlight">“死记硬背了噪音，没学会真正治病”</span></p>
+                </div>
+                <ul>
+                    <li>✅ <strong>正则化</strong>：逼它抓重点</li>
+                    <li>✅ <strong>Dropout/早停</strong>：别让它学疯魔</li>
+                    <li>✅ <strong>数据增强</strong>：多变着花样练</li>
+                    <li>✅ <strong>集成/交叉验证</strong>：多专家交叉验证</li>
+                </ul>
+                <p style="margin-top:20px;">👉 目标：让 AI 实习医生真正<strong>出师</strong>，去给病人看病！</p>
+            </section>
+
+            <!-- 幻灯片 10：结束 -->
+            <section class="center">
+                <h2>谢谢观看</h2>
+                <p>Q & A</p>
+            </section>
+        </div>
+    </div>
+
+    <!-- 引入 Reveal.js 脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.js"></script>
+    <script>
+        // 初始化 Reveal
+        Reveal.initialize({
+            hash: true,           // 支持 URL 锚点定位
+            slideNumber: true,    // 显示页码
+            transition: 'slide',  // 切换动画：none/fade/slide/convex/concave/zoom
+            controls: true,       // 显示方向键
+            progress: true,       // 显示进度条
+            center: false         // 内容默认不居中（已在CSS中设置左对齐）
+        });
+    </script>
+</body>
+</html>
